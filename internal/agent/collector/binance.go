@@ -10,13 +10,13 @@ import (
 
 type Binance struct {}
 
-type binanceResponse struct {
-	Price string `json: "price"`
-}
-
 func (b Binance) GetStat(coin string) models.Stat { //Get information from market
-	url := "https://api.binance.com/api/v3/ticker/price?symbol=" + b.formatSymbol(coin)
-	var resp binanceResponse
+	url := "https://api.binance.com/api/v3/ticker/price?symbol=" + b.formatSymbolUSDT(coin)
+
+	var resp struct {
+		Price string `json:"price"`
+	}
+
 	err := GetJSON(url, &resp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: Dont get JSON (%v)\n", err)
@@ -30,6 +30,6 @@ func (b Binance) GetStat(coin string) models.Stat { //Get information from marke
 	}
 }
 
-func (b Binance) formatSymbol(coin string) string {
+func (b Binance) formatSymbolUSDT(coin string) string {
     return coin + "USDT"
 }

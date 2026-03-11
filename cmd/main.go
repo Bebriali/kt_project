@@ -19,8 +19,9 @@ func main() {
 	// 	h := &handlers.Handler{Repo: repo}
 	myExchanges := []models.Exchange{
 		collector.Binance{},
-		// Bybit
+		collector.Bybit{},
 		// Kraken
+		//CoinBase
 	}
 	targetCoins := []string{"BTC", "ETH", "DOGE"} //можно с командной строки
 
