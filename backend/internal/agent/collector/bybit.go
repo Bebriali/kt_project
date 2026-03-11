@@ -2,7 +2,7 @@ package collector
 
 import (
 	"fmt"
-	"kt_project/internal/models"
+	"backend/internal/models"
 	"os"
 	"time"
 	"strconv"
@@ -16,7 +16,7 @@ func (b Bybit) GetStat(coin string) models.Stat { //Get information from market
 	var resp struct {
     	Result struct {
     		List []struct {
-    	        Price string `json:"lastPrice,string"` //JSON structure
+    	        Price string `json:"lastPrice"` //JSON structure
     	    } `json:"list"`
     	} `json:"result"`
 	}
@@ -27,7 +27,7 @@ func (b Bybit) GetStat(coin string) models.Stat { //Get information from market
 	}
 	price, _:= strconv.ParseFloat(resp.Result.List[0].Price, 64)
 	return models.Stat{
-		Name:  coin,
+		Symbol:  coin,
 		Price: price,
 		Source: "Bybit",
 		Timedump: time.Now(),
