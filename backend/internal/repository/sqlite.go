@@ -19,6 +19,13 @@ func NewSqlStorage(path string) (*SqlStorage, error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1) //no more than 1 goroutine write to bd
+
+	_, err = db.Exec("PRAGMA journal_mode=WAL;") //allow read file while writing
+	if err != nil {
+		return nil, err
+	}
+
 	statement, err := db.Prepare(`CREATE TABLE IF NOT EXISTS stats (
         symbol TEXT,
         price REAL,
