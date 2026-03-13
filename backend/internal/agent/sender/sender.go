@@ -1,13 +1,14 @@
 package sender
+
 import (
+	"backend/internal/models"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"backend/internal/models"
 	"net/http"
-	"bytes"
 	"time"
-
 )
+
 //func SendStat(url string, data *models.Stat) error {
 //					fmt.Printf("I HERE\n")
 //	jsonData, err := json.Marshal(data)
@@ -32,7 +33,10 @@ import (
 //}
 
 func SendStat(url string, data *models.Stat) error {
-	fmt.Printf("I HERE\n")
+	if data.AskPrice == 0 || data.BidPrice == 0 {
+		return fmt.Errorf("failed to parse price stat")
+	}
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal data stat: %w", err)

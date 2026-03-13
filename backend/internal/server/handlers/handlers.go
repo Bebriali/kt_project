@@ -1,16 +1,18 @@
 package handlers
 
 import (
-	"encoding/json"
 	"backend/internal/models"
-	"backend/internal/repository"
+	"backend/internal/repository/postgres"
+	"backend/internal/repository/redis"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 )
 
 type Handler struct {
-	Repo repository.Storage
+	Repo  *postgres.Storage
+	Cache *redis.Storage
 }
 
 func (h *Handler) Main(w http.ResponseWriter, r *http.Request) {
@@ -43,10 +45,16 @@ func (h *Handler) DumpStat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// checkin agent logs
-	log.Printf("Saving to DB: Exchange=%s, Base=%s, Quote=%s, AskPrice=%f, BidPrice=%f, Time=%v",s.Source, s.Base, s.Quote, s.AskPrice, s.BidPrice, s.Timedump)
+	log.Printf("Saving to DB: 	Exchange=%s, 	Base=%s, 	Quote=%s, 	AskPrice=%f, 	BidPrice=%f, 	Time=%v",
+		s.Source, s.Base, s.Quote, s.AskPrice, s.BidPrice, s.Timedump)
 
 	if err := h.Repo.Save(s); err != nil {
 		log.Printf("DATABASE SAVE ERROR: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	if err := h.Cache.Save(s); err != nil {
+		log.Printf("CACHE SAVE ERROR: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
@@ -56,14 +64,16 @@ func (h *Handler) DumpStat(w http.ResponseWriter, r *http.Request) {
 
 // GetStat godoc
 // @Summary      Get all crypto stats
-// @Description  Returns a list of all collected cryptocurrency statistics from the database
+// @Description  Returns a list of all collected cryptocurrency statistics from the database to the stat router
 // @Tags         stats
 // @Produce      json
 // @Success      200  {array}   models.Stat
 // @Failure      500  {object}  string
 // @Router       /stat [get]
 func (h *Handler) GetStat(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.Repo.GetStat()
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	stats, err := h.Cache.GetStat()
 	if err != nil {
 		log.Printf("error getting data from db: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

@@ -1,18 +1,18 @@
-package repository
+package sqlite
 
 import (
-	"database/sql"
 	"backend/internal/models"
+	"database/sql"
 	"time"
 
 	_ "modernc.org/sqlite" // driver for sqlite
 )
 
-type SqlStorage struct {
+type Storage struct {
 	db *sql.DB
 }
 
-func NewSqlStorage(path string) (*SqlStorage, error) {
+func NewStorage(path string) (*Storage, error) {
 	db, err := sql.Open("sqlite", path)
 
 	if err != nil {
@@ -27,8 +27,10 @@ func NewSqlStorage(path string) (*SqlStorage, error) {
 	}
 
 	statement, err := db.Prepare(`CREATE TABLE IF NOT EXISTS stats (
-        symbol TEXT,
-        price REAL,
+        base TEXT,
+		quote TEXT,
+		askprice REAL,
+        bidprice REAL,
         source TEXT,
         timedump DATETIME
     )`)
@@ -37,17 +39,17 @@ func NewSqlStorage(path string) (*SqlStorage, error) {
 	}
 	statement.Exec()
 
-	return &SqlStorage{db: db}, nil
+	return &Storage{db: db}, nil
 }
 
-func (s *SqlStorage) Save(stat models.Stat) error {
+func (s *Storage) Save(stat models.Stat) error {
 	query := `INSERT INTO stats (base, quote, askprice, bidprice, source, timedump) VALUES (?, ?, ?, ?, ?, ?)`
 	_, err := s.db.Exec(query, stat.Base, stat.Quote, stat.AskPrice, stat.BidPrice, stat.Source, stat.Timedump)
 	return err
 }
 
-func (r *SqlStorage) GetStat() ([]models.Stat, error) {
-		rows, err := r.db.Query("SELECT base, quote, askprice, bidprice, source, timedump FROM stats ORDER BY timedump DESC LIMIT 100")
+func (r *Storage) GetStat() ([]models.Stat, error) {
+	rows, err := r.db.Query("SELECT base, quote, askprice, bidprice, source, timedump FROM stats ORDER BY timedump DESC LIMIT 100")
 	if err != nil {
 		return nil, err
 	}

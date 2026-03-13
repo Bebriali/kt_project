@@ -1,12 +1,26 @@
 version: '3.8'
 
-servises:
+services:
+  # Твой Redis (оставляем как есть)
   redis:
     image: redis:7-alpine
     container_name: data-redis
     ports:
-     - "6379:6379"
+      - "6379:6379"
     restart: always
 
-# probably later
-# server:
+  postgres:
+    image: postgres:latest
+    container_name: metrics_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=metrics_db
+    ports:
+      - "5444:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: always
+
+volumes:
+  postgres_data:

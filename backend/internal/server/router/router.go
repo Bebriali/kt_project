@@ -18,7 +18,11 @@ func NewRouter(h *handlers.Handler) *chi.Mux {
 
 	// CORS for React to connect
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins: []string{"http://localhost:5173", "http://localhost:3000"}, // порты фронтенда
+		AllowedOrigins: []string{
+			"http://localhost:5173",
+			"http://localhost:3000",
+			"http://localhost:8080",
+		}, // порты фронтенда
 		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Content-Type"},
 	}))

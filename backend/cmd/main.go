@@ -5,6 +5,7 @@ import (
 	"backend/cmd/server"
 	"backend/internal/agent/collector"
 	"backend/internal/models"
+	"log"
 	"time"
 )
 
@@ -23,12 +24,22 @@ func main() {
 		// Kraken
 		//CoinBase
 	}
-	targetCoins := []string{"BTC", "ETH", "DOGE"} //можно с командной строки
+	targetCoins := []string{
+		"PEPE", "SHIB", // Мемы для волатильности
+		"SOL", "BNB", "XRP", // Топ по капитализации
+		"ETH", "DOGE", "BTC", // Твои текущие
+		"USDT", "USDC", // Стейблы для пар
+	}
 
-	go server.Run()
+	go func() {
+		if err := server.Run(); err != nil {
+			log.Fatalf("Критическая ошибка сервера: %v", err)
+		}
+	}()
+	time.Sleep(2 * time.Second)
 
 	ticker := time.NewTicker(1 * time.Second)
 	for range ticker.C {
-		agent.RunAgent(myExchanges, targetCoins)
+		agent.Run(myExchanges, targetCoins)
 	}
 }

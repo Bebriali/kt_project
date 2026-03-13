@@ -1,41 +1,61 @@
 package collector
 
 import (
-	"fmt"
 	"backend/internal/models"
-	"os"
-	"time"
+	"fmt"
 	"strconv"
+	"time"
 )
 
-type Bybit struct {}
+type Bybit struct{}
 
-
-func (b Bybit) GetStat(baseCoin string, quoteCoin string) (models.Stat, error) { //Get information from market
+func (b Bybit) GetStat(baseCoin string, quoteCoin string) (models.Stat, error) {
+	// Формируем URL. Bybit чувствителен к регистру,
+	// если в coins затесались строчные буквы — лучше добавить strings.ToUpper
 	url := fmt.Sprintf("https://api.bybit.com/v5/market/tickers?category=spot&symbol=%s%s", baseCoin, quoteCoin)
+
 	var resp struct {
-    	Result struct {
-    		List []struct {
-    	        BidPrice string `json:"bid1Price"` //JSON structure
-    	        AskPrice string `json:"ask1Price"`
-    	    } `json:"list"`
-    	} `json:"result"`
+		Result struct {
+			List []struct {
+				BidPrice string `json:"bid1Price"`
+				AskPrice string `json:"ask1Price"`
+			} `json:"list"`
+		} `json:"result"`
 	}
 
 	err := GetJSON(url, &resp)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: Dont get JSON (%v)\n", err)
-		return models.Stat{}, fmt.Errorf("No data")
+		// Не пишем в stderr здесь, отдаем ошибку наверх в Run
+		return models.Stat{}, fmt.Errorf("bybit network error: %w", err)
 	}
-	if len(resp.Result.List) == 0 { return models.Stat{}, fmt.Errorf("No data") }
-	bidprice, _:= strconv.ParseFloat(resp.Result.List[0].BidPrice, 64)
-	askprice, _:= strconv.ParseFloat(resp.Result.List[0].AskPrice, 64)
+
+	// 1. Проверяем, что список не пуст (Bybit возвращает пустой list для неверных пар)
+	if len(resp.Result.List) == 0 {
+		return models.Stat{}, fmt.Errorf("[BYBIT] symbol %s%s not found", baseCoin, quoteCoin)
+	}
+
+	// Берём первый элемент для удобства
+	data := resp.Result.List[0]
+
+	// 2. Проверяем на пустые строки в JSON (бывает при технических работах на бирже)
+	if data.BidPrice == "" || data.AskPrice == "" {
+		return models.Stat{}, fmt.Errorf("[BYBIT] empty price strings for %s%s", baseCoin, quoteCoin)
+	}
+
+	// 3. Парсим с проверкой ошибок
+	bidprice, errBid := strconv.ParseFloat(data.BidPrice, 64)
+	askprice, errAsk := strconv.ParseFloat(data.AskPrice, 64)
+
+	if errBid != nil || errAsk != nil || bidprice == 0 || askprice == 0 {
+		return models.Stat{}, fmt.Errorf("[BYBIT] invalid price values for %s%s", baseCoin, quoteCoin)
+	}
+
 	return models.Stat{
-		Base: baseCoin,
-		Quote: quoteCoin,
+		Base:     baseCoin,
+		Quote:    quoteCoin,
 		AskPrice: askprice,
 		BidPrice: bidprice,
-		Source: "Bybit",
+		Source:   "Bybit",
 		Timedump: time.Now(),
 	}, nil
 }
