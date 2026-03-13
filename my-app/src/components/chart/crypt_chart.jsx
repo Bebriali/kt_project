@@ -3,52 +3,55 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const CryptChart = () => {
     const [data, setData] = useState([]);
-    const [selectedSymbol, setSelectedSymbol] = useState('BTC');
+    const [selectedBase, setSelectedBase] = useState('SOL'); // Базовая валюта
+    const [selectedQuote, setSelectedQuote] = useState('USDT'); // К чему котируется
     const [selectedExchange, setSelectedExchange] = useState('Binance');
 
     useEffect(() => {
-        // Функция для загрузки данных
         const loadData = () => {
             fetch('http://localhost:8080/stat')
-                .then(res => res.json()) // 1. Сначала парсим JSON
-                .then(json => {          // 2. Теперь работаем с массивом
-                    // Преобразуем строковую цену в число и разворачиваем массив
+                .then(res => res.json())
+                .then(json => {
+                    // Цены теперь уже числа (0.009219), parseFloat не обязателен,
+                    // но оставим для надежности, если придет строка
                     const processedData = json.map(item => ({
                         ...item,
-                        price: parseFloat(item.price)
+                        askPrice: parseFloat(item.askPrice)
                     }));
-
-                    // Сохраняем обработанные данные (хронологический порядок)
                     setData(processedData.reverse());
                 })
                 .catch(err => console.error("Ошибка загрузки:", err));
         };
 
-        // 1. Загружаем сразу при старте
         loadData();
-
-        // 2. Ставим таймер на обновление каждые 5 секунд
         const interval = setInterval(loadData, 5000);
-
-        // 3. Очищаем таймер, если компонент удалится (важно!)
         return () => clearInterval(interval);
     }, []);
 
+    // Обновленная логика фильтрации
     const filteredData = data.filter(item =>
-        item.symbol === selectedSymbol && item.source === selectedExchange
+        item.base === selectedBase &&
+        item.quote === selectedQuote &&
+        item.source === selectedExchange
     );
 
-    const symbols = [...new Set(data.map(item => item.symbol))];
+    // Динамические списки для выпадающих меню
+    const bases = [...new Set(data.map(item => item.base))];
+    const quotes = [...new Set(data.map(item => item.quote))];
     const exchanges = [...new Set(data.map(item => item.source))];
 
     return (
         <div style={{ width: '100%', height: 500, padding: '20px', backgroundColor: '#fff', borderRadius: '8px' }}>
-            <h2 style={{ color: '#333' }}>Мониторинг курса</h2>
+            <h2 style={{ color: '#333' }}>Мониторинг: {selectedBase}/{selectedQuote}</h2>
 
             {/* Панель фильтров */}
             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-                <select value={selectedSymbol} onChange={(e) => setSelectedSymbol(e.target.value)}>
-                    {symbols.map(s => <option key={s} value={s}>{s}</option>)}
+                <select value={selectedBase} onChange={(e) => setSelectedBase(e.target.value)}>
+                    {bases.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+
+                <select value={selectedQuote} onChange={(e) => setSelectedQuote(e.target.value)}>
+                    {quotes.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
 
                 <select value={selectedExchange} onChange={(e) => setSelectedExchange(e.target.value)}>
@@ -65,7 +68,8 @@ const CryptChart = () => {
                     />
                     <YAxis
                         domain={['auto', 'auto']}
-                        tickFormatter={(val) => val.toFixed(2)}
+                        // Увеличим точность для пар к BTC (например, 0.0012415)
+                        tickFormatter={(val) => val < 1 ? val.toFixed(6) : val.toFixed(2)}
                     />
                     <Tooltip
                         labelFormatter={(label) => new Date(label).toLocaleString()}
@@ -73,7 +77,7 @@ const CryptChart = () => {
                     />
                     <Line
                         type="monotone"
-                        dataKey="price"
+                        dataKey="askPrice" // Используем новое имя поля
                         stroke="#ff0099cb"
                         strokeWidth={3}
                         dot={false}
